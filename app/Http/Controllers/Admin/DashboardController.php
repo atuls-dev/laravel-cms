@@ -9,6 +9,9 @@ use App\Models\User;
 use App\Models\UserProfile;
 use Auth;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\File;
+use App\Http\Requests\UserProfileRequest;
+use Exception;
 
 class DashboardController extends Controller
 {
@@ -33,34 +36,43 @@ class DashboardController extends Controller
         return view('admin/editProfile');
     }
 
-    public function updateProfile(Request $request)
+    public function updateProfile(UserProfileRequest $request)
     {
         $user = Auth::user();
         //$user = User::with('UserProfile')->findOrFail(Auth::user()->id);
 
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-        ]);
-        
-        if($request->hasFile('avatar')){
-            $file = $request->file('avatar');
-            //Move Uploaded File
-            $destinationPath = 'uploads/user';
-            $fileData = $file->move($destinationPath,$file->getClientOriginalName());
-            
-            //updating user profile info
-            $userProfile = Auth::user()->userProfile;
-            $userProfile->avatar = $fileData->getFileName();
-            $userProfile->save();
-        }
-        
-        //updating user info
-        $user->update($request->all());
+        // $request->validate([
+        //     'name' => ['required', 'string', 'max:255'],
+        //     'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+        // ]);
 
- 
-        //return back()->with('success', 'Blog created successfully.');
-        return redirect()->route('admin.editProfile')->with('status','Profile updated successfully !');
+        try {
+            if ($request->hasFile('avatar')){
+                $userProfile = Auth::user()->userProfile;
+
+                $file = $request->file('avatar');
+                $destinationPath = 'uploads/user';
+                
+                //delete previous file
+                $old_file_path = $destinationPath.'/'.$userProfile->avatar;
+                if (File::exists(public_path($old_file_path))) {
+                    File::delete(public_path($old_file_path));
+                }
+
+                //Move Uploaded File
+                $fileData = $file->move($destinationPath,$file->getClientOriginalName());
+                
+                //updating user profile info
+                $userProfile->avatar = $fileData->getFileName();
+                $userProfile->save();
+            }
+            
+            //updating user info
+            $user->update($request->all());
+            return redirect()->route('admin.editProfile')->with('status','Profile updated successfully !');
+        } catch (\Exception $e) {
+            return back()->withInput()->withErrors(['exception' => $e->getMessage()]);
+        }
     }
 
 
