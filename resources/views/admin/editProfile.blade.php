@@ -14,6 +14,15 @@
                         </div>
                     @endif
 
+
+                    @if ($errors->any())
+                        @foreach ($errors->all() as $error)
+                            <div class="alert alert-danger" role="alert">
+                                {{ $error }}
+                            </div>
+                        @endforeach
+                    @endif 
+
                     <form method="POST" action="{{ route('admin.updateProfile') }}" enctype="multipart/form-data">
                         @csrf
                         <!-- @method('POST') -->
